@@ -134,6 +134,8 @@ def check(policy, request=api):
     base = f"repos/{policy['repository']}"
     failures = []
     repo = request("GET", base)
+    if repo.get("default_branch") != "main" or repo.get("visibility") != "public":
+        failures.append("expected public repository with default branch main")
     if not matches(policy["settings"], repo):
         failures.append("repository settings/security scanning")
     permissions = request("GET", f"{base}/actions/permissions/workflow")

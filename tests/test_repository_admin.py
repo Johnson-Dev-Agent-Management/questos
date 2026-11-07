@@ -108,6 +108,29 @@ class AdministrationTests(unittest.TestCase):
         actual["bypass_actors"] = [{"actor_id": 5, "actor_type": "RepositoryRole", "bypass_mode": "always"}]
         self.assertFalse(admin.matches(desired, actual))
 
+    def test_check_detects_default_branch_and_visibility_drift_without_writes(self):
+        for branch, visibility in [("main", "public"), ("unprotected", "public"), ("main", "private")]:
+            with self.subTest(branch=branch, visibility=visibility):
+                github = FakeGitHub()
+                github.rulesets = [dict(copy.deepcopy(rule), id=index + 1, source_type="Repository", source=POLICY["repository"])
+                                   for index, rule in enumerate(POLICY["rulesets"])]
+
+                def request(method, path, payload=None):
+                    if path == BASE:
+                        return dict(copy.deepcopy(POLICY["settings"]), default_branch=branch, visibility=visibility)
+                    if path.endswith("/actions/permissions/workflow"):
+                        return POLICY["workflow_permissions"]
+                    if path.endswith("/vulnerability-alerts"):
+                        return None
+                    return github(method, path, payload)
+
+                if branch == "main" and visibility == "public":
+                    admin.check(POLICY, request)
+                else:
+                    with self.assertRaisesRegex(RuntimeError, "default branch main"):
+                        admin.check(POLICY, request)
+                self.assert_no_writes(github)
+
     def test_main_review_cannot_be_bypassed_and_owner_update_gate_is_separate(self):
         review, updates, tags = POLICY["rulesets"]
         self.assertEqual(review["bypass_actors"], [])
