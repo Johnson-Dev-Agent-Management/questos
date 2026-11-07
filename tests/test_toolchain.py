@@ -15,6 +15,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 bootstrap = importlib.import_module("bootstrap")
 inspector = importlib.import_module("inspect_apk")
+dev = importlib.import_module("dev")
 
 
 class ToolchainTests(unittest.TestCase):
@@ -56,6 +57,37 @@ class ToolchainTests(unittest.TestCase):
         with patch.object(bootstrap, "download", side_effect=AssertionError("download")):
             with self.assertRaisesRegex(RuntimeError, "acceptance"):
                 bootstrap.setup(android=True, accept_android_license=False)
+
+    def test_truncated_receipt_is_repaired(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            tools = Path(temporary)
+            archive = tools / "tool.zip"
+            with zipfile.ZipFile(archive, "w") as z:
+                z.writestr("tool", "working")
+            destination = tools / "installed"
+            destination.mkdir()
+            (destination / ".questos-install.json").write_text('{"sha256":')
+            asset = {"file": "tool.zip", "sha256": bootstrap.sha256(archive)}
+            with patch.object(bootstrap, "TOOLS", tools), patch.object(bootstrap, "download", return_value=archive):
+                bootstrap.install(asset, destination, ["tool"])
+            self.assertEqual(json.loads((destination / ".questos-install.json").read_text())["sha256"], asset["sha256"])
+
+    def test_export_does_not_publish_if_checkout_revision_changes(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            (root / "app").mkdir()
+            (root / "app/project.godot").write_text("config_version=5\n")
+
+            def export(command, *args, **kwargs):
+                Path(command[-1]).write_bytes(b"mock APK")
+
+            identities = [{"source_sha": "a" * 40, "source_dirty": False}, {"source_sha": "b" * 40, "source_dirty": False}]
+            with patch.object(dev, "ROOT", root), patch.object(dev, "source_identity", side_effect=identities), \
+                    patch.object(dev, "import_and_smoke"), patch.object(dev, "run", side_effect=export), \
+                    patch.object(inspector, "inspect_apk", return_value={}):
+                with self.assertRaisesRegex(RuntimeError, "changed during export"):
+                    dev.export_android({"godot": "unused", "host": "linux"}, {})
+            self.assertEqual(list((root / "build").iterdir()), [])
 
     def test_package_permissions_abi_and_signatures_are_checked(self):
         base = "package: name='org.johnsondev.questos.dev' versionCode='1' versionName='0.1.0-dev'\nminSdkVersion:'24'\ntargetSdkVersion:'36'\nnative-code: 'arm64-v8a'\n"

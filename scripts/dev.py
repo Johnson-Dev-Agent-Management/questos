@@ -2,6 +2,7 @@
 """Use the project-local Godot toolchain without changing global PATH/settings."""
 
 import argparse
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -84,24 +85,39 @@ def doctor(config, env, android):
     print("Doctor passed" + (" (Android export tools installed)." if android else " (editor installed)."))
 
 
+def source_identity():
+    return {"source_sha": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip(),
+            "source_dirty": bool(subprocess.check_output(["git", "status", "--porcelain"], cwd=ROOT, text=True).strip())}
+
+
+def project_digest(project):
+    digest = hashlib.sha256()
+    for path in sorted(p for p in project.rglob("*") if p.is_file()):
+        digest.update(path.relative_to(project).as_posix().encode("utf-8") + b"\0")
+        digest.update(sha256(path).encode("ascii") + b"\n")
+    return digest.hexdigest()
+
+
 def export_android(config, env):
     from inspect_apk import inspect_apk
     build = ROOT / "build"
     build.mkdir(exist_ok=True)
+    identity = source_identity()
     # Do not import from or export with a previous project's .godot cache.
     with tempfile.TemporaryDirectory(prefix="questos-export-") as temporary:
         project = Path(temporary) / "app"
         shutil.copytree(ROOT / "app", project, ignore=shutil.ignore_patterns(".godot"))
+        snapshot_digest = project_digest(project)
         apk = Path(temporary) / "questos-dev-unsigned.apk"
         import_and_smoke(config, env, project)
         run([config["godot"], "--headless", "--xr-mode", "off", "--path", str(project),
              "--export-release", "Android Smoke", str(apk)], env, timeout=300, godot=True)
         report = inspect_apk(apk, config, env)
+        if source_identity() != identity:
+            raise RuntimeError("Source revision or dirty state changed during export; rerun from a stable checkout.")
         destination = build / apk.name
         shutil.copy2(apk, destination)
-    source_sha = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
-    dirty = bool(subprocess.check_output(["git", "status", "--porcelain"], cwd=ROOT, text=True).strip())
-    report.update({"source_sha": source_sha, "source_dirty": dirty, "toolchain_lock_sha256": sha256(LOCK),
+    report.update({**identity, "project_snapshot_sha256": snapshot_digest, "toolchain_lock_sha256": sha256(LOCK),
                    "host": config["host"], "artifact": destination.name,
                    "build_kind": "unsigned Android build smoke test; not an XR headset candidate",
                    "github_run_id": os.environ.get("GITHUB_RUN_ID"),

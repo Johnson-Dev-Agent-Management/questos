@@ -96,8 +96,11 @@ def install(asset, destination, required, prefix="", members=None):
     receipt = destination / ".questos-install.json"
     wanted = {"sha256": asset["sha256"], "required": required}
     if receipt.is_file():
-        if json.loads(receipt.read_text()) == wanted and all((destination / p).is_file() for p in required):
-            return
+        try:
+            if json.loads(receipt.read_text()) == wanted and all((destination / p).is_file() for p in required):
+                return
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            pass  # An interrupted receipt write is an incomplete installation.
     archive = download(asset)
     destination.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix="questos-install-", dir=TOOLS) as temporary:
@@ -110,7 +113,9 @@ def install(asset, destination, required, prefix="", members=None):
         if destination.exists():
             shutil.rmtree(destination)
         shutil.copytree(content, destination, symlinks=True)
-    receipt.write_text(json.dumps(wanted, indent=2) + "\n", encoding="utf-8")
+    temporary_receipt = receipt.with_suffix(".json.tmp")
+    temporary_receipt.write_text(json.dumps(wanted, indent=2) + "\n", encoding="utf-8")
+    temporary_receipt.replace(receipt)
 
 
 def write_editor_settings(godot_dir, jdk=None, sdk=None):

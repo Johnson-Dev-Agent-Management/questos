@@ -80,9 +80,12 @@ The export helper copies the project to a fresh temporary directory, imports
 resources, smoke-runs the scene, and exports without any existing `.godot` cache.
 It inspects the resulting package before placing it in
 `build/questos-dev-unsigned.apk`, with `build/build-manifest.json` containing the
-digest, source revision/dirty state, toolchain-lock digest, host, and CI identifiers
+digest, source revision/dirty state sampled before the build, copied project
+snapshot digest, toolchain-lock digest, host, and CI identifiers
 when applicable. CI exports the tested checkout, which is normally GitHub's PR
-merge revision on pull-request runs.
+merge revision on pull-request runs. A changed HEAD/dirty state during export
+fails before publication. Local dirty builds are identified as such; their
+snapshot digest identifies the copied project without claiming it matches HEAD.
 
 This is a **regular Android build smoke test, not an XR headset candidate**.
 It uses the standard prebuilt APK template and does not install Gradle, native
