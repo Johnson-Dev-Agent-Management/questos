@@ -65,6 +65,7 @@ def import_and_smoke(config, env, project):
     base = [config["godot"], "--headless", "--xr-mode", "off", "--path", str(project)]
     run(base + ["--editor", "--import"], env, godot=True)
     run(base + ["--quit-after", "3"], env, godot=True)
+    run(base + ["--script", ROOT / "tests/godot/test_interaction.gd"], env, godot=True)
 
 
 def doctor(config, env, android):
@@ -74,7 +75,11 @@ def doctor(config, env, android):
         raise RuntimeError("Godot does not match the pinned version.")
     if android:
         suffix = ".exe" if os.name == "nt" else ""
-        run([Path(config["java_home"]) / "bin" / ("java" + suffix), "-version"], env)
+        java_version = run([Path(config["java_home"]) / "bin" / ("java" + suffix), "-version"], env)
+        if "build " + lock["java_version"] not in java_version:
+            raise RuntimeError("Java does not match the pinned build.")
+        if sha256(TOOLS / "downloads" / lock["assets"]["gradle"]["file"]) != lock["assets"]["gradle"]["sha256"]:
+            raise RuntimeError("Gradle distribution checksum mismatch; rerun setup.")
         sdk = Path(config["android_home"])
         for path, revision in [("build-tools/" + lock["android_build_tools"], lock["android_build_tools"]),
                                ("platform-tools", lock["android_platform_tools"]),
@@ -102,18 +107,30 @@ def project_digest(project):
 
 def export_android(config, env):
     from inspect_apk import inspect_apk
+    from android_build import prepare_gradle, gradle_environment
+    env = gradle_environment(env)
     build = ROOT / "build"
     build.mkdir(exist_ok=True)
     identity = source_identity()
-    # Do not import from or export with a previous project's .godot cache.
+    source = ROOT / "app"
+
+    def ignore_generated(directory, names):
+        ignored = {".godot"}
+        if Path(directory) == source / "android":
+            ignored.add("build")
+        return ignored.intersection(names)
+
+    # Exclude local caches/templates before import and snapshot hashing. Gradle
+    # preparation extracts the pinned template into the fresh temporary project.
     with tempfile.TemporaryDirectory(prefix="questos-export-") as temporary:
         project = Path(temporary) / "app"
-        shutil.copytree(ROOT / "app", project, ignore=shutil.ignore_patterns(".godot"))
+        shutil.copytree(source, project, ignore=ignore_generated)
         snapshot_digest = project_digest(project)
-        apk = Path(temporary) / "questos-dev-unsigned.apk"
+        apk = Path(temporary) / "questos-p1-unsigned.apk"
         import_and_smoke(config, env, project)
+        prepare_gradle(project, config)
         run([config["godot"], "--headless", "--xr-mode", "off", "--path", str(project),
-             "--export-release", "Android Smoke", str(apk)], env, timeout=300, godot=True)
+             "--export-release", "Quest 2 Candidate", str(apk)], env, timeout=900, godot=True)
         report = inspect_apk(apk, config, env)
         if source_identity() != identity:
             raise RuntimeError("Source revision or dirty state changed during export; rerun from a stable checkout.")
@@ -121,7 +138,7 @@ def export_android(config, env):
         shutil.copy2(apk, destination)
     report.update({**identity, "project_snapshot_sha256": snapshot_digest, "toolchain_lock_sha256": config["lock_sha256"],
                    "host": config["host"], "artifact": destination.name,
-                   "build_kind": "unsigned Android build smoke test; not an XR headset candidate",
+                   "build_kind": "unsigned Quest 2 P1 candidate; physical validation pending",
                    "github_run_id": os.environ.get("GITHUB_RUN_ID"),
                    "github_run_attempt": os.environ.get("GITHUB_RUN_ATTEMPT"),
                    "github_workflow_ref": os.environ.get("GITHUB_WORKFLOW_REF")})

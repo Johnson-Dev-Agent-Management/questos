@@ -157,7 +157,8 @@ def setup(android=False, accept_android_license=False):
         install(assets["build_tools_" + host], sdk / "build-tools" / lock["android_build_tools"], ["aapt2" + suffix, "lib/apksigner.jar"], prefix=lock["build_tools_archive_root"])
         install(assets["platform_all"], sdk / "platforms" / f"android-{lock['android_platform']}", ["android.jar"], prefix=lock["platform_archive_root"])
         template_dir = godot_dir / "editor_data/export_templates/4.6.3.stable"
-        template_files = ["android_debug.apk", "android_release.apk"]
+        template_files = ["android_debug.apk", "android_release.apk", "android_source.zip"]
+        download(assets["gradle"])
         install(assets["templates"], template_dir, template_files, prefix="templates",
                 members={"templates/" + name for name in template_files})
         (sdk / ".questos-license-acceptance.json").write_text(json.dumps({"terms": ANDROID_TERMS, "acceptance": "explicit --accept-android-sdk-license option"}, indent=2) + "\n", encoding="utf-8")

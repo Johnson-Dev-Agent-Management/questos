@@ -48,7 +48,7 @@ Headless `check` and `export-android` work without a display. The tested Linux
 baseline is Ubuntu 24.04; a minimal distribution may need its standard Godot
 runtime libraries. No system packages are installed automatically.
 
-## Android build smoke test (either operating system)
+## Quest 2 candidate export (either operating system)
 
 Review the [Android SDK terms](https://developer.android.com/studio/terms).
 The explicit acceptance flag enables the additional SDK installation.
@@ -69,7 +69,7 @@ python3 scripts/dev.py doctor --android
 python3 scripts/dev.py export-android
 ```
 
-Allow roughly 2 GB of downloads and 5 GB of free space for the full setup. The
+Allow roughly 2.5 GB of downloads and 7 GB of free space for the full setup. The
 editor-only setup downloads about 80 MB. Archives are cached in `.tools/downloads`;
 subsequent setup reuses verified installations. A checksum mismatch fails rather
 than accepting changed bytes. An interrupted extraction is repaired on retry.
@@ -79,7 +79,7 @@ It does not remove your system tools.
 The export helper copies the project to a fresh temporary directory, imports
 resources, smoke-runs the scene, and exports without any existing `.godot` cache.
 It inspects the resulting package before placing it in
-`build/questos-dev-unsigned.apk`, with `build/build-manifest.json` containing the
+`build/questos-p1-unsigned.apk`, with `build/build-manifest.json` containing the
 digest, source revision/dirty state sampled before the build, copied project
 snapshot digest, toolchain-lock digest, host, and CI identifiers
 when applicable. CI exports the tested checkout, which is normally GitHub's PR
@@ -87,13 +87,35 @@ merge revision on pull-request runs. A changed HEAD/dirty state during export
 fails before publication. Local dirty builds are identified as such; their
 snapshot digest identifies the copied project without claiming it matches HEAD.
 
-This is a **regular Android build smoke test, not an XR headset candidate**.
-It uses the standard prebuilt APK template and does not install Gradle, native
-compilers, or the Vendors plugin. The manifest confirms minSdk 24, targetSdk 36,
-arm64-only libraries, no requested permissions, and no signing block. The first
-headset milestone must separately establish XR packaging, controller input,
-owner signing, and physical acceptance. Do not treat this artifact as P1 or P3
-evidence. Nothing in these helpers installs an APK or runs device commands.
+This is an **unsigned XR headset candidate**, not a physical P1 pass. The fresh
+Godot Gradle template uses Gradle 8.11.1, AGP 8.6.1, Kotlin 2.1.21, Khronos loader
+1.1.54, and the existing API 36/build-tools 36.0.0 setup. Runtime declarations are
+minSdk 29 / targetSdk 32 for the Quest 2 sideload candidate; compiling against
+API 36 does not require API 36 on the headset. The device's actual OS/API and
+runtime compatibility remain unknown until the owner tests it. No store release
+or compatibility with every Horizon version is claimed.
+
+The export adds Quest 2 metadata, immersive launch categories, runtime broker
+queries, and only the two OpenXR permissions. Inspection verifies these on the
+actual APK, along with the exact arm64 loader bytes, ELF architecture, release
+identity, absence of signing, and the OpenXR command line. Gradle dependencies
+use committed version locks and strict SHA-256 verification (including the
+Windows aapt2 artifact). Missing/changed locks fail; export never refreshes them.
+The NDK is unnecessary: the template ships prebuilt native libraries, whose
+symbols are kept instead of downloading a compiler to strip them again.
+
+Gradle caches remain under `.tools/gradle-user-home`; each project/build tree is
+fresh. Java receives the inherited HTTP(S) proxy settings. Managed Linux uses its
+OS Java trust store when an explicit certificate bundle is configured; native
+Windows uses Temurin trust. `QUESTOS_JAVA_TRUSTSTORE` can select a trusted local
+store. TLS verification stays enabled. Do not put authenticated proxy credentials
+into Java options/build logs. Dependency refresh is a separately reviewed change:
+generate Gradle locks/checksums in a disposable build, inspect new coordinates
+and official source artifacts, include both host classifiers, update lockfile
+hashes, and run both clean platform jobs.
+
+See the [Windows signing/install/test handoff](p1-headset-handoff.md). Nothing in
+these development helpers installs an APK or connects to a device.
 
 ## Codex Cloud configuration
 
@@ -108,7 +130,7 @@ environment in Codex environment settings, use:
 | Setup command, from repo root | `bash scripts/cloud-setup.sh` |
 | Verification/maintenance command | `python3 scripts/dev.py doctor --android` |
 | Secrets | None required for installing/building; bot-scoped GitHub access for PR work |
-| Setup network hosts | `github.com`, `api.github.com`, `release-assets.githubusercontent.com`, `dl.google.com` |
+| Setup network hosts | `github.com`, `api.github.com`, `release-assets.githubusercontent.com`, `dl.google.com`, `downloads.gradle.org`, `repo.maven.apache.org`, `repo1.maven.org`, `plugins.gradle.org`, `plugins-artifacts.gradle.org` |
 | Private networking | No VPN, forwarded ADB, or connection to the owner's test station |
 
 `cloud-setup.sh` includes the explicit Android SDK acceptance flag and runs

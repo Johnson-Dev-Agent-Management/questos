@@ -1,4 +1,4 @@
-[gd_scene load_steps=7 format=3]
+[gd_scene load_steps=11 format=3]
 
 [ext_resource type="Script" path="res://scenes/bootstrap.gd" id="1_script"]
 
@@ -17,6 +17,20 @@ roughness = 0.6
 [sub_resource type="BoxMesh" id="Mesh_cube"]
 material = SubResource("Material_cube")
 size = Vector3(0.5, 0.5, 0.5)
+
+[sub_resource type="BoxShape3D" id="Shape_cube"]
+size = Vector3(0.5, 0.5, 0.5)
+
+[sub_resource type="BoxShape3D" id="Shape_exit"]
+size = Vector3(0.8, 0.35, 0.12)
+
+[sub_resource type="StandardMaterial3D" id="Material_ray"]
+shading_mode = 0
+albedo_color = Color(0.7, 0.85, 1, 1)
+
+[sub_resource type="BoxMesh" id="Mesh_ray"]
+material = SubResource("Material_ray")
+size = Vector3(0.008, 0.008, 5)
 
 [sub_resource type="Environment" id="Environment_main"]
 background_mode = 1
@@ -43,6 +57,26 @@ position = Vector3(0, 1.25, -2)
 rotation_degrees = Vector3(0, 25, 0)
 mesh = SubResource("Mesh_cube")
 
+[node name="Body" type="StaticBody3D" parent="Cube"]
+collision_layer = 1
+collision_mask = 0
+
+[node name="Shape" type="CollisionShape3D" parent="Cube/Body"]
+shape = SubResource("Shape_cube")
+
+[node name="Exit" type="Label3D" parent="."]
+position = Vector3(0, 0.8, -2)
+text = "[ Exit ]"
+font_size = 48
+pixel_size = 0.004
+
+[node name="Body" type="StaticBody3D" parent="Exit"]
+collision_layer = 1
+collision_mask = 0
+
+[node name="Shape" type="CollisionShape3D" parent="Exit/Body"]
+shape = SubResource("Shape_exit")
+
 [node name="Origin" type="XROrigin3D" parent="."]
 
 [node name="Camera" type="XRCamera3D" parent="Origin"]
@@ -58,7 +92,25 @@ modulate = Color(0.92, 0.96, 1, 1)
 
 [node name="Subtitle" type="Label3D" parent="."]
 position = Vector3(0, 1.77, -2.5)
-text = "Development scene"
-font_size = 32
+text = "Aim either ray + trigger: change cube color\nB / Y or select Exit: quit | Meta button: system menu"
+font_size = 25
 pixel_size = 0.004
 modulate = Color(0.55, 0.65, 0.76, 1)
+
+[node name="Left" type="XRController3D" parent="Origin"]
+tracker = &"left_hand"
+pose = &"aim"
+
+[node name="Ray" type="MeshInstance3D" parent="Origin/Left"]
+position = Vector3(0, 0, -2.5)
+mesh = SubResource("Mesh_ray")
+cast_shadow = 0
+
+[node name="Right" type="XRController3D" parent="Origin"]
+tracker = &"right_hand"
+pose = &"aim"
+
+[node name="Ray" type="MeshInstance3D" parent="Origin/Right"]
+position = Vector3(0, 0, -2.5)
+mesh = SubResource("Mesh_ray")
+cast_shadow = 0

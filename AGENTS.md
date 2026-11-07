@@ -46,6 +46,7 @@ the user's current authorization determines the work to execute.
 package-inspection failure boundaries.
 `python3 scripts/admin/configure_repository.py --plan` prints desired settings
 without authentication or network access. CI additionally runs actionlint and
-clean Android smoke exports on Windows and Linux. `python3 scripts/dev.py check`
-imports and smoke-runs the scene. `python3 scripts/dev.py export-android` builds
-and inspects an unsigned regular-Android APK; it is not an XR headset candidate.
+clean Quest candidate exports on Windows and Linux. `python3 scripts/dev.py check`
+imports, smoke-runs, and checks scene physics. `python3 scripts/dev.py export-android`
+builds and inspects an unsigned OpenXR P1 candidate. CI does not pass P1; the owner
+must sign and physically test the exact signed APK.
