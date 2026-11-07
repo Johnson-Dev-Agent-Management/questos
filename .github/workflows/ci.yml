@@ -23,7 +23,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - name: Test administration safeguards
+      - name: Test administration and packaging safeguards
         run: python3 -m unittest discover -s tests -v
       - name: Validate policy rendering without credentials
         run: python3 scripts/admin/configure_repository.py --plan
@@ -70,14 +70,14 @@ jobs:
         run: .\scripts\setup.ps1 --android --accept-android-sdk-license
       - name: Verify installed versions
         run: python scripts/dev.py doctor --android
-      - name: Clean import, smoke run, Android export, and package inspection
+      - name: Clean import, smoke run, Quest candidate export, and XR package inspection
         run: python scripts/dev.py export-android
-      - name: Retain unsigned smoke build and manifest
+      - name: Retain unsigned Quest candidate and manifest
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: android-smoke-${{ matrix.os }}
+          name: quest2-p1-${{ matrix.os }}
           path: |
-            questos workspace/build/questos-dev-unsigned.apk
+            questos workspace/build/questos-p1-unsigned.apk
             questos workspace/build/build-manifest.json
           if-no-files-found: error
           retention-days: 3

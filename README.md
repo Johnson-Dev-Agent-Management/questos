@@ -4,10 +4,10 @@ A small Godot/OpenXR learning project for a personally owned Meta Quest 2.
 The first deliverable is a performance playground running as an ordinary app
 on stock Horizon OS.
 
-**Status:** project-local Windows/Linux tooling, a stationary desktop scene, and
-an unsigned Android build smoke test. The smoke APK is a regular Android app,
-not an XR headset candidate. XR packaging, controller interaction, standalone
-headset launch, and physical acceptance are the next app milestone.
+**Status:** off-device Quest 2 P1 candidate: a stationary scene, Touch-controller
+ray selection to toggle a cube's color, and a selectable Exit control. Clean
+Gradle/OpenXR exports are inspected on Linux and native Windows. Owner signing
+and physical headset launch/input/exit tests are still required; P1 is not passed.
 
 ## Start here
 
@@ -41,14 +41,15 @@ python3 scripts/dev.py check
 ```
 
 CI installs the locked tools on fresh Linux and Windows runners, imports and
-smoke-runs the scene, exports an unsigned arm64 APK, and checks its package,
+smoke-runs the scene, exports an unsigned arm64 Quest candidate, and checks its XR metadata/loader, package,
 SDK levels, permissions, ABI, and lack of signatures. It also runs the unit tests
 and workflow lint. The existing required `repository-checks` job depends on
 both platform builds; it runs on every PR without path filters. Artifacts expire
 after three days. No signing or deployment credentials are used.
 
-Passing CI establishes the tested development/export path, not XR packaging,
-physical headset behavior, comfort, or performance acceptance.
+Passing CI establishes the tested development/export path and inspected XR
+packaging. Physical headset behavior, comfort, and performance remain unverified.
+See the [Windows P1 handoff](docs/p1-headset-handoff.md).
 
 ## Project boundaries
 

@@ -1,6 +1,7 @@
 """Test installer and package-validation failure boundaries without downloads."""
 
 import hashlib
+import struct
 import contextlib
 import importlib
 import io
@@ -18,6 +19,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 bootstrap = importlib.import_module("bootstrap")
 inspector = importlib.import_module("inspect_apk")
 dev = importlib.import_module("dev")
+android_build = importlib.import_module("android_build")
 
 
 class ToolchainTests(unittest.TestCase):
@@ -85,7 +87,7 @@ class ToolchainTests(unittest.TestCase):
 
             identities = [{"source_sha": "a" * 40, "source_dirty": False}, {"source_sha": "b" * 40, "source_dirty": False}]
             with patch.object(dev, "ROOT", root), patch.object(dev, "source_identity", side_effect=identities), \
-                    patch.object(dev, "import_and_smoke"), patch.object(dev, "run", side_effect=export), \
+                    patch.object(dev, "import_and_smoke"), patch.object(android_build, "prepare_gradle"), patch.object(dev, "run", side_effect=export), \
                     patch.object(inspector, "inspect_apk", return_value={}):
                 with self.assertRaisesRegex(RuntimeError, "changed during export"):
                     dev.export_android({"godot": "unused", "host": "linux"}, {})
@@ -105,7 +107,7 @@ class ToolchainTests(unittest.TestCase):
             identity = {"source_sha": "a" * 40, "source_dirty": True}
             config = {"godot": "unused", "host": "linux", "lock_sha256": "b" * 64}
             with patch.object(dev, "ROOT", root), patch.object(dev, "LOCK", lock_path), \
-                    patch.object(dev, "source_identity", return_value=identity), patch.object(dev, "import_and_smoke"), \
+                    patch.object(dev, "source_identity", return_value=identity), patch.object(dev, "import_and_smoke"), patch.object(android_build, "prepare_gradle"), \
                     patch.object(dev, "run", side_effect=export), patch.object(inspector, "inspect_apk", return_value={"apk_sha256": "c" * 64}):
                 with contextlib.redirect_stdout(io.StringIO()):
                     dev.export_android(config, {})
@@ -113,26 +115,42 @@ class ToolchainTests(unittest.TestCase):
             self.assertEqual(record["toolchain_lock_sha256"], config["lock_sha256"])
             self.assertNotEqual(record["toolchain_lock_sha256"], bootstrap.sha256(lock_path))
 
-    def test_package_permissions_abi_and_signatures_are_checked(self):
-        base = "package: name='org.johnsondev.questos.dev' versionCode='1' versionName='0.1.0-dev'\nminSdkVersion:'24'\ntargetSdkVersion:'36'\nnative-code: 'arm64-v8a'\n"
-        cases = [([], "", True), ([], "uses-permission: name='android.permission.CAMERA'\n", False),
-                 (["lib/x86/libbad.so"], "", False), (["META-INF/SIGNER.RSA"], "", False)]
-        for extra, extra_badging, expected in cases:
-            with self.subTest(extra=extra, badging=extra_badging), tempfile.TemporaryDirectory() as temporary:
+    def test_package_permissions_abi_loader_mode_and_signatures_are_checked(self):
+        base = "package: name='org.johnsondev.questos.dev' versionCode='2' versionName='0.1.0-p1'\nminSdkVersion:'29'\ntargetSdkVersion:'32'\nnative-code: 'arm64-v8a'\n"
+        base += "".join(f"uses-permission: name='{p}'\n" for p in inspector.PERMISSIONS)
+        manifest = (ROOT / "tests/fixtures/p1-manifest.txt").read_text()
+        elf = b"\x7fELF\x02\x01" + b"\0" * 12 + struct.pack('<H', 183)
+        cases = [({}, True), ({"badging": "uses-permission: name='android.permission.CAMERA'\n"}, False),
+                 ({"extra": "lib/x86/libbad.so"}, False), ({"extra": "META-INF/SIGNER.RSA"}, False),
+                 ({"command": b"--xr_mode_regular"}, False), ({"loader": b"wrong loader"}, False),
+                 ({"engine": b"not ELF"}, False), ({"manifest": manifest.replace('com.oculus.intent.category.VR', 'wrong')}, False),
+                 ({"manifest": manifest.replace('com.godot.game.GodotApp" (Raw:', 'wrong" (Raw:')}, False)]
+        for changes, expected in cases:
+            with self.subTest(changes=changes.keys()), tempfile.TemporaryDirectory() as temporary:
                 apk = Path(temporary) / "sample.apk"
                 with zipfile.ZipFile(apk, "w") as z:
-                    z.writestr("lib/arm64-v8a/libgodot_android.so", b"fixture")
-                    z.writestr("assets/_cl_", b"--xr_mode_regular")
-                    for path in extra:
-                        z.writestr(path, b"fixture")
-                responses = [subprocess.CompletedProcess([], 0, base + extra_badging, ""),
-                             subprocess.CompletedProcess([], 0, "android.intent.category.LAUNCHER", "")]
+                    z.writestr("lib/arm64-v8a/libgodot_android.so", changes.get("engine", elf))
+                    z.writestr("lib/arm64-v8a/libopenxr_loader.so", changes.get("loader", elf))
+                    z.writestr("assets/_cl_", changes.get("command", b"--xr_mode_openxr"))
+                    if "extra" in changes:
+                        z.writestr(changes["extra"], b"fixture")
+                responses = [subprocess.CompletedProcess([], 0, base + changes.get("badging", ""), ""),
+                             subprocess.CompletedProcess([], 0, changes.get("manifest", manifest), "")]
+                config = {"host": "linux", "android_home": temporary, "toolchain": {"android_build_tools": "36.0.0", "openxr_loader": "1.1.54", "openxr_loader_arm64_sha256": hashlib.sha256(elf).hexdigest()}}
                 with patch.object(inspector.subprocess, "run", side_effect=responses):
                     if expected:
-                        self.assertEqual(inspector.inspect_apk(apk, {"host": "linux", "android_home": temporary, "toolchain": {"android_build_tools": "36.0.0"}}, {})["signing"], "unsigned")
+                        self.assertTrue(inspector.inspect_apk(apk, config, {})["xr_headset_candidate"])
                     else:
                         with self.assertRaises(RuntimeError):
-                            inspector.inspect_apk(apk, {"host": "linux", "android_home": temporary, "toolchain": {"android_build_tools": "36.0.0"}}, {})
+                            inspector.inspect_apk(apk, config, {})
+
+    def test_xr_metadata_values_must_belong_to_application_scope(self):
+        manifest = (ROOT / "tests/fixtures/p1-manifest.txt").read_text()
+        # Keep all tokens, but put the supportedDevices value on a different entry.
+        wrong = manifest.replace('="quest2" (Raw: "quest2")', '="wrong" (Raw: "wrong")')
+        wrong += '\n      E: meta-data\n        A: android:name="com.oculus.supportedDevices"\n        A: android:value="quest2"\n'
+        with self.assertRaisesRegex(RuntimeError, "metadata"):
+            inspector.validate_xr_manifest(wrong)
 
 
 if __name__ == "__main__":

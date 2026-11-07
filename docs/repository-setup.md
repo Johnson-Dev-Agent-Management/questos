@@ -92,10 +92,10 @@ the implementation access boundary complete.
 
 ## Next work
 
-1. Review and merge the Windows/Linux toolchain bootstrap. The existing required
-   `repository-checks` gate will depend on both clean Android smoke export jobs.
+1. Preserve the active rulesets and existing required `repository-checks` gate;
+   it depends on both clean native Windows and Linux Quest candidate exports.
 2. Save the reusable Codex environment settings using the documented setup recipe.
-3. Establish XR packaging and controller input for the first headset candidate.
+3. Review the small P1 XR packaging/controller candidate and its dependency/check changes.
 4. Owner performs signing and the first headset proof after device preparation.
 
 The owner explicitly deferred removal of the owner GitHub connector for current
