@@ -21,7 +21,11 @@ func _ready() -> void:
 
 func _physics_process(_delta: float) -> void:
 	for controller: XRController3D in [$Origin/Left, $Origin/Right]:
-		controller.visible = xr != null and xr.is_initialized() and xr.get_session_state() == OpenXRInterface.SESSION_STATE_FOCUSED and controller.get_has_tracking_data()
+		controller.visible = _can_interact(controller)
+
+
+func _can_interact(controller: XRController3D) -> bool:
+	return xr != null and xr.is_initialized() and xr.get_session_state() == OpenXRInterface.SESSION_STATE_FOCUSED and controller.get_has_tracking_data()
 
 
 func target_at(from: Vector3, direction: Vector3) -> Object:
@@ -39,7 +43,7 @@ func select_target(target: Object) -> void:
 
 
 func _on_button_pressed(action: String, controller: XRController3D) -> void:
-	if not controller.visible:
+	if not _can_interact(controller):
 		return
 	if action == "exit":
 		get_tree().quit()

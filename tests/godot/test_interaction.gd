@@ -31,6 +31,11 @@ func check_scene() -> void:
 	var controller = scene.get_node("Origin/Right")
 	scene._on_button_pressed("select", controller)
 	require(not scene.selected, "Inactive/untracked input must be ignored")
+	# Visibility may lag tracking/focus by one physics frame. It is not authority.
+	controller.visible = true
+	controller.position = Vector3(0, 1.25, 0)
+	scene._on_button_pressed("select", controller)
+	require(not scene.selected, "Stale visibility must not permit input without a current focused/tracked session")
 	var map: OpenXRActionMap = load("res://input/quest_touch.tres")
 	var profile = map.interaction_profiles[0]
 	require(profile.interaction_profile_path == "/interaction_profiles/oculus/touch_controller", "Touch profile required")
