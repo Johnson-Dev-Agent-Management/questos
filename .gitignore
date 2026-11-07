@@ -1,0 +1,36 @@
+# Godot generated state
+.godot/
+*.tmp
+
+# Local tools and build outputs
+.tools/
+.venv/
+__pycache__/
+*.py[cod]
+build/
+dist/
+*.apk
+*.aab
+
+# Credentials, signing identities, and local configuration
+.env
+.env.*
+!.env.example
+*.jks
+*.keystore
+*.p12
+*.pfx
+*.pem
+*.key
+local.properties
+export_credentials.cfg
+
+# Private device and acceptance records
+private/
+local-records/
+
+# Editors and operating systems
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
