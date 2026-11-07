@@ -16,8 +16,10 @@ python3 -m unittest discover -s tests -v
 python3 scripts/admin/configure_repository.py --plan
 ```
 
-The CI job also validates workflow syntax with actionlint. Required checks must
-keep stable names and report on every PR. Updates to checks, dependencies,
+CI also validates workflow syntax and exercises fresh toolchain setup and clean
+Android smoke exports on Windows and Linux. The required `repository-checks`
+gate depends on both platform jobs. Required checks must keep stable names and
+report on every PR. Updates to checks, toolchain.lock.json, dependencies,
 fixtures, thresholds, exclusions, and permissions require owner review.
 
 For app changes, record the source/toolchain and exact APK identity. Physical
