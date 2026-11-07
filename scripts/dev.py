@@ -19,8 +19,10 @@ def environment(require_android=False):
     if not path.is_file():
         raise RuntimeError("Run scripts/setup.ps1 (Windows) or bash scripts/setup.sh (Linux) first.")
     config = json.loads(path.read_text(encoding="utf-8"))
-    if config["lock_sha256"] != sha256(LOCK):
+    lock_bytes = LOCK.read_bytes()
+    if config["lock_sha256"] != hashlib.sha256(lock_bytes).hexdigest():
         raise RuntimeError("Toolchain lock changed; rerun setup before using this environment.")
+    config["toolchain"] = json.loads(lock_bytes)
     if not Path(config["godot"]).is_file():
         raise RuntimeError("Godot is missing; rerun setup.")
     env = os.environ.copy()
@@ -66,7 +68,7 @@ def import_and_smoke(config, env, project):
 
 
 def doctor(config, env, android):
-    lock = json.loads(LOCK.read_text())
+    lock = config["toolchain"]
     version = run([config["godot"], "--headless", "--version"], env).strip()
     if not version.startswith(lock["godot_version"] + ".stable."):
         raise RuntimeError("Godot does not match the pinned version.")
@@ -117,7 +119,7 @@ def export_android(config, env):
             raise RuntimeError("Source revision or dirty state changed during export; rerun from a stable checkout.")
         destination = build / apk.name
         shutil.copy2(apk, destination)
-    report.update({**identity, "project_snapshot_sha256": snapshot_digest, "toolchain_lock_sha256": sha256(LOCK),
+    report.update({**identity, "project_snapshot_sha256": snapshot_digest, "toolchain_lock_sha256": config["lock_sha256"],
                    "host": config["host"], "artifact": destination.name,
                    "build_kind": "unsigned Android build smoke test; not an XR headset candidate",
                    "github_run_id": os.environ.get("GITHUB_RUN_ID"),

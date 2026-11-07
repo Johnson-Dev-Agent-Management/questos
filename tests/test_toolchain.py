@@ -1,7 +1,9 @@
 """Test installer and package-validation failure boundaries without downloads."""
 
 import hashlib
+import contextlib
 import importlib
+import io
 import json
 from pathlib import Path
 import subprocess
@@ -89,6 +91,28 @@ class ToolchainTests(unittest.TestCase):
                     dev.export_android({"godot": "unused", "host": "linux"}, {})
             self.assertEqual(list((root / "build").iterdir()), [])
 
+    def test_export_records_validated_toolchain_even_if_lock_is_edited(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            (root / "app").mkdir()
+            (root / "app/project.godot").write_text("config_version=5\n")
+            lock_path = root / "toolchain.lock.json"
+            lock_path.write_text('{"changed": true}')
+
+            def export(command, *args, **kwargs):
+                Path(command[-1]).write_bytes(b"mock APK")
+
+            identity = {"source_sha": "a" * 40, "source_dirty": True}
+            config = {"godot": "unused", "host": "linux", "lock_sha256": "b" * 64}
+            with patch.object(dev, "ROOT", root), patch.object(dev, "LOCK", lock_path), \
+                    patch.object(dev, "source_identity", return_value=identity), patch.object(dev, "import_and_smoke"), \
+                    patch.object(dev, "run", side_effect=export), patch.object(inspector, "inspect_apk", return_value={"apk_sha256": "c" * 64}):
+                with contextlib.redirect_stdout(io.StringIO()):
+                    dev.export_android(config, {})
+            record = json.loads((root / "build/build-manifest.json").read_text())
+            self.assertEqual(record["toolchain_lock_sha256"], config["lock_sha256"])
+            self.assertNotEqual(record["toolchain_lock_sha256"], bootstrap.sha256(lock_path))
+
     def test_package_permissions_abi_and_signatures_are_checked(self):
         base = "package: name='org.johnsondev.questos.dev' versionCode='1' versionName='0.1.0-dev'\nminSdkVersion:'24'\ntargetSdkVersion:'36'\nnative-code: 'arm64-v8a'\n"
         cases = [([], "", True), ([], "uses-permission: name='android.permission.CAMERA'\n", False),
@@ -105,10 +129,10 @@ class ToolchainTests(unittest.TestCase):
                              subprocess.CompletedProcess([], 0, "android.intent.category.LAUNCHER", "")]
                 with patch.object(inspector.subprocess, "run", side_effect=responses):
                     if expected:
-                        self.assertEqual(inspector.inspect_apk(apk, {"host": "linux", "android_home": temporary}, {})["signing"], "unsigned")
+                        self.assertEqual(inspector.inspect_apk(apk, {"host": "linux", "android_home": temporary, "toolchain": {"android_build_tools": "36.0.0"}}, {})["signing"], "unsigned")
                     else:
                         with self.assertRaises(RuntimeError):
-                            inspector.inspect_apk(apk, {"host": "linux", "android_home": temporary}, {})
+                            inspector.inspect_apk(apk, {"host": "linux", "android_home": temporary, "toolchain": {"android_build_tools": "36.0.0"}}, {})
 
 
 if __name__ == "__main__":

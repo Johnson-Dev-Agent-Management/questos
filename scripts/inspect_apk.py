@@ -1,18 +1,17 @@
 """Validate the development package; does not establish device behavior or origin."""
 
-import json
 from pathlib import Path
 import re
 import subprocess
 import zipfile
 
-from bootstrap import LOCK, sha256
+from bootstrap import sha256
 
 PACKAGE = "org.johnsondev.questos.dev"
 
 
 def inspect_apk(apk, config, env):
-    lock = json.loads(LOCK.read_text())
+    lock = config["toolchain"]
     suffix = ".exe" if config["host"] == "windows" else ""
     tool = Path(config["android_home"]) / "build-tools" / lock["android_build_tools"] / ("aapt2" + suffix)
 
