@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "godot_version": "4.6.3",
+  "godot_release": "4.6.3-stable",
+  "java_version": "17.0.21+9",
+  "android_build_tools": "36.0.0",
+  "android_platform": 36,
+  "android_platform_revision": 2,
+  "android_platform_tools": "37.0.1",
+  "build_tools_archive_root": "android-16",
+  "platform_archive_root": "android-36",
+  "renderer": "gl_compatibility",
+  "gradle": "not used (standard Android smoke export); XR packaging deferred",
+  "vendors_plugin": "not installed; evaluate for the first headset candidate",
+  "assets": {
+    "godot_linux": {
+      "url": "https://github.com/godotengine/godot-builds/releases/download/4.6.3-stable/Godot_v4.6.3-stable_linux.x86_64.zip",
+      "sha256": "d0bc2113065e481c9c2c2b2c37daa4e8be3fe9e27f0ab9ab0b6096e9a37907f3",
+      "file": "Godot_v4.6.3-stable_linux.x86_64.zip"
+    },
+    "godot_windows": {
+      "url": "https://github.com/godotengine/godot-builds/releases/download/4.6.3-stable/Godot_v4.6.3-stable_win64.exe.zip",
+      "sha256": "e39986a178d585ce7ac198fb8de6ea436366dc0cc00e594810c2e3e104c04b90",
+      "file": "Godot_v4.6.3-stable_win64.exe.zip"
+    },
+    "templates": {
+      "url": "https://github.com/godotengine/godot-builds/releases/download/4.6.3-stable/Godot_v4.6.3-stable_export_templates.tpz",
+      "sha256": "3fbe2c0e2dec9d537ab9ec97bcf8da91dcf23357fc51f67092dd068d839290a8",
+      "file": "Godot_v4.6.3-stable_export_templates.tpz"
+    },
+    "jdk_linux": {
+      "url": "https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.21%2B9/OpenJDK17U-jdk_x64_linux_hotspot_17.0.21_9.tar.gz",
+      "sha256": "8b9b611d917e3dfd8419d3566b5949226f69b052fed7e109c1368add1dfe8711",
+      "file": "OpenJDK17U-jdk_x64_linux_hotspot_17.0.21_9.tar.gz"
+    },
+    "jdk_windows": {
+      "url": "https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.21%2B9/OpenJDK17U-jdk_x64_windows_hotspot_17.0.21_9.zip",
+      "sha256": "98518ecf554465057ee5509462631deeee374bc368c12a411d225cd29381f84b",
+      "file": "OpenJDK17U-jdk_x64_windows_hotspot_17.0.21_9.zip"
+    },
+    "platform_all": {
+      "url": "https://dl.google.com/android/repository/platform-36_r02.zip",
+      "file": "platform-36_r02.zip",
+      "sha1": "2c1a80dd4d9f7d0e6dd336ec603d9b5c55a6f576",
+      "sha256": "37607369a28c5b640b3a7998868d45898ebcb777565a0e85f9acf36f29631d2e"
+    },
+    "build_tools_linux": {
+      "url": "https://dl.google.com/android/repository/build-tools_r36_linux.zip",
+      "file": "build-tools_r36_linux.zip",
+      "sha1": "b0b6376977657e8ad9b969bacf4093601da2c6fb",
+      "sha256": "5d9ac77fb6ff43d9da518a337b4fcf8f9097113df531d99ccefe80ef7ce8250b"
+    },
+    "build_tools_windows": {
+      "url": "https://dl.google.com/android/repository/build-tools_r36_windows.zip",
+      "file": "build-tools_r36_windows.zip",
+      "sha1": "f16ccffd34de8790dede813a6c7d8e2c11a27b50",
+      "sha256": "aa1095cb14d83e483818a748a2c06faaeb8e601561b06a356a119a1b2ca280d3"
+    },
+    "platform_tools_linux": {
+      "url": "https://dl.google.com/android/repository/platform-tools_r37.0.1-linux.zip",
+      "sha1": "477254aa5f903c15cf51001717bdf347fb6b53e0",
+      "file": "platform-tools_r37.0.1-linux.zip",
+      "sha256": "d230f13842f60f782a8645f9c813f8f845bf36089ea7289f28c48f17979313f1"
+    },
+    "platform_tools_windows": {
+      "url": "https://dl.google.com/android/repository/platform-tools_r37.0.1-win.zip",
+      "sha1": "e03e78b1d80b396f1c3358e31251cb31740e1110",
+      "file": "platform-tools_r37.0.1-win.zip",
+      "sha256": "45f4d63113e895ebde0c90f194099a4676b6ac653bd28d54314a9e022bbc1a99"
+    }
+  }
+}

@@ -12,13 +12,17 @@ These roles were verified during setup on November 7, 2026.
 - Monthly GitHub Actions dependency-update PRs, limited to two open PRs.
 - A reviewed policy and owner-run administration helper for the settings below.
 
-**Live settings are not established by committing these files.** During initial
+**Live settings are not established by committing these files.** The owner ran
+the administration helper successfully on November 7, 2026. All three active
+rulesets, including their bypass actors, were independently read back and matched
+the policy. Squash-only merge settings and branch cleanup were also confirmed.
+This is a recorded setup observation; use `--check` to inspect later drift.
+
+During initial
 setup, the connector could write repository contents but exposed no ruleset or
 repository-settings write tool. The CLI authenticated as the bot; an owner CLI
 or working owner browser session is needed to apply the administration policy.
-The initial repository had no rulesets. Run `--check` after applying the policy
-to establish the current state, rather than treating this historical note as a
-live assertion.
+The initial repository had no rulesets; the owner completed that application step.
 
 ## Intended enforced settings
 
@@ -88,12 +92,15 @@ the implementation access boundary complete.
 
 ## Next work
 
-1. Apply and verify the administration policy with owner-capable access.
-2. Remove owner-authorized connections from the future implementation context;
-   resolve the bot's remaining release capability and check device isolation.
-3. Pin the Godot/Android toolchain and establish one clean export/inspection.
-4. Add the demonstrated Android export job as a required check.
-5. Owner performs signing and the first headset proof after device preparation.
+1. Review and merge the Windows/Linux toolchain bootstrap. The existing required
+   `repository-checks` gate will depend on both clean Android smoke export jobs.
+2. Save the reusable Codex environment settings using the documented setup recipe.
+3. Establish XR packaging and controller input for the first headset candidate.
+4. Owner performs signing and the first headset proof after device preparation.
+
+The owner explicitly deferred removal of the owner GitHub connector for current
+work. Continue with the bot for implementation. Full release/credential isolation
+remains unproven; it is not a blocker to the setup/development now authorized.
 
 No paid services, release automation, headset changes, or reusable cloud setup
 were created by this repository bootstrap. The full retained-release build and

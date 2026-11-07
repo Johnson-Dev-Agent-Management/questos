@@ -19,6 +19,10 @@ the user's current authorization determines the work to execute.
   or device reset commands as part of app setup or CI.
 - An instruction file is not an access control. Report effective permission
   gaps honestly; do not claim isolation just because these instructions exist.
+- The owner explicitly permitted keeping the owner GitHub connector available
+  for current project setup/development. Do not block that work on removing it.
+  Use the bot for implementation, preserve human PR approval, and report that
+  complete credential/release isolation has not been established.
 
 ## Changes and validation
 
@@ -38,7 +42,10 @@ the user's current authorization determines the work to execute.
 
 ## Current checks
 
-`python3 -m unittest discover -s tests -v` tests administration safety behavior.
+`python3 -m unittest discover -s tests -v` tests administration, installer, and
+package-inspection failure boundaries.
 `python3 scripts/admin/configure_repository.py --plan` prints desired settings
-without authentication or network access. CI additionally runs actionlint.
-The Android export check is deliberately absent until a clean export works.
+without authentication or network access. CI additionally runs actionlint and
+clean Android smoke exports on Windows and Linux. `python3 scripts/dev.py check`
+imports and smoke-runs the scene. `python3 scripts/dev.py export-android` builds
+and inspects an unsigned regular-Android APK; it is not an XR headset candidate.
