@@ -93,6 +93,43 @@ class ToolchainTests(unittest.TestCase):
                     dev.export_android({"godot": "unused", "host": "linux"}, {})
             self.assertEqual(list((root / "build").iterdir()), [])
 
+    def test_export_excludes_local_android_build_before_import(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            files = {
+                "project.godot": "config_version=5\n",
+                "android/build/build.gradle": "stale build recipe",
+                "android/build/libs/stale.so": "stale native library",
+                "android/plugins/keep.gdap": "local plugin configuration",
+                "assets/build/keep.txt": "ordinary project resource",
+                ".godot/stale": "old import cache",
+            }
+            for name, content in files.items():
+                path = root / "app" / name
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(content)
+
+            def import_project(config, env, project):
+                self.assertFalse((project / "android/build").exists())
+                self.assertFalse((project / ".godot").exists())
+                for name in ("android/plugins/keep.gdap", "assets/build/keep.txt"):
+                    self.assertEqual((project / name).read_text(), files[name])
+
+            def export(command, *args, **kwargs):
+                Path(command[-1]).write_bytes(b"mock APK")
+
+            config = {"godot": "unused", "host": "linux", "lock_sha256": "b" * 64}
+            identity = {"source_sha": "a" * 40, "source_dirty": False}
+            with patch.object(dev, "ROOT", root), patch.object(dev, "source_identity", return_value=identity), \
+                    patch.object(dev, "import_and_smoke", side_effect=import_project), \
+                    patch.object(android_build, "prepare_gradle"), patch.object(dev, "run", side_effect=export), \
+                    patch.object(inspector, "inspect_apk", return_value={"apk_sha256": "c" * 64}):
+                with contextlib.redirect_stdout(io.StringIO()):
+                    dev.export_android(config, {})
+            self.assertTrue((root / "build/questos-p1-unsigned.apk").is_file())
+            for name, content in files.items():
+                self.assertEqual((root / "app" / name).read_text(), content)
+
     def test_export_records_validated_toolchain_even_if_lock_is_edited(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

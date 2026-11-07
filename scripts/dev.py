@@ -112,10 +112,19 @@ def export_android(config, env):
     build = ROOT / "build"
     build.mkdir(exist_ok=True)
     identity = source_identity()
-    # Do not import from or export with a previous project's .godot cache.
+    source = ROOT / "app"
+
+    def ignore_generated(directory, names):
+        ignored = {".godot"}
+        if Path(directory) == source / "android":
+            ignored.add("build")
+        return ignored.intersection(names)
+
+    # Exclude local caches/templates before import and snapshot hashing. Gradle
+    # preparation extracts the pinned template into the fresh temporary project.
     with tempfile.TemporaryDirectory(prefix="questos-export-") as temporary:
         project = Path(temporary) / "app"
-        shutil.copytree(ROOT / "app", project, ignore=shutil.ignore_patterns(".godot"))
+        shutil.copytree(source, project, ignore=ignore_generated)
         snapshot_digest = project_digest(project)
         apk = Path(temporary) / "questos-p1-unsigned.apk"
         import_and_smoke(config, env, project)
