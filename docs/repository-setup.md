@@ -15,8 +15,15 @@ These roles were verified during setup on November 7, 2026.
 **Live settings are not established by committing these files.** The owner ran
 the administration helper successfully on November 7, 2026. All three active
 rulesets, including their bypass actors, were independently read back and matched
-the policy. Squash-only merge settings and branch cleanup were also confirmed.
-This is a recorded setup observation; use `--check` to inspect later drift.
+the policy at that time. Squash-only merge settings and branch cleanup were also
+confirmed. That setup used a separate owner-update ruleset whose admin exception
+caused a routine bypass warning when merging.
+
+The current policy replaces that update ruleset with conventional `main` branch
+protection, allowing `Joshbomb75` to push/merge and excluding the write-role bot.
+This migration has **not been applied or verified live** by this change. Run the
+reviewed helper from an owner administration context as described below, then
+use `--check` to inspect the resulting settings and later drift.
 
 During initial
 setup, the connector could write repository contents but exposed no ruleset or
@@ -33,16 +40,25 @@ The complete payloads are in [repository-policy.json](../.github/repository-poli
 | `main` review | PR, one code-owner approval, stale approval dismissal, approval after the latest reviewable push, resolved conversations, up-to-date required CI |
 | Required check | `repository-checks`, bound to GitHub Actions app ID 15368 |
 | Branch integrity | Linear history; block deletion and force push; no bypass on the review ruleset |
-| Who may update `main` | Separate update restriction; only repository admins may bypass that restriction |
+| Who may update `main` | Conventional branch protection restricts pushes/merges to `Joshbomb75`; no teams or apps are allowed |
 | Tags | Only repository admins may create, update, or delete tags |
 | Merge settings | Squash only, auto-merge disabled, delete merged branches |
 | Actions defaults | Read-only token; Actions cannot approve PRs |
 | Security | Secret scanning, push protection, vulnerability alerts |
 
-The separate update restriction prevents the write-role bot from merging even
-an approved PR. The admin exception on that restriction does **not** bypass
-the separate PR/check requirements. Admins can still change policy through
-repository administration; keep admin credentials outside implementation contexts.
+The conventional push restriction also applies to PR merges. It prevents the
+write-role bot from merging an approved PR while allowing an ordinary owner
+merge without the old ruleset's routine bypass warning. GitHub still permits
+repository admins to push under classic push restrictions; the separate
+`questos-main-review` ruleset has no bypass and still requires the PR, approval,
+CI, resolved conversations, and branch integrity for everyone. No collaborator
+roles or tag restrictions change.
+
+The classic protection's `required_status_checks` and
+`required_pull_request_reviews` are `null` because those requirements remain in
+the unchanged review ruleset. Rulesets and classic branch protection apply
+together. Admins can still change policy through repository administration;
+keep admin credentials outside implementation contexts.
 CODEOWNERS must exist on `main` before enforcement. An owner-authored PR cannot
 receive its required approval from the same owner: normal implementation PRs
 should be authored by the bot. The initial bootstrap is a one-time setup action.
@@ -78,14 +94,41 @@ python3 scripts/admin/configure_repository.py --check
 On Windows, `py -3` may be used in place of `python3`.
 
 The default/`--plan` mode has no network access or writes. Apply refuses the bot
-identity and non-admin credentials, checks the current main's CODEOWNERS and
-successful GitHub Actions check, then creates or updates only the three named
-rulesets. It preserves unrelated/inherited rulesets and collaborator permissions.
-It reads back the configured fields afterward. A failed or unsupported API call
-is an error, not a successful setup; writes are not transactional. Inspect the
-partial state and rerun only after addressing the error.
+identity and non-admin credentials and checks the current main's CODEOWNERS and
+successful GitHub Actions check. It maintains the two named review/tag rulesets,
+creates the conventional owner push restriction, and reads back the effective
+branch protection and unchanged rulesets before deleting the exact legacy
+`questos-main-owner-updates` ruleset. The legacy payload is kept under
+`retired_rulesets` solely to identify the rule that may be removed; it is never
+recreated. A replacement write/readback failure leaves the old update gate in
+place. Rerunning after successful migration skips the existing replacement.
 
-Afterward, inspect the rulesets as the bot and verify that the bot has no bypass.
+Apply refuses to overwrite different existing classic branch protection or to
+delete a modified/inherited legacy rule. Inspect such conflicts manually. It
+preserves unrelated/inherited rulesets and collaborator permissions. It reads
+back the configured fields afterward. A failed or unsupported API call is an
+error, not a successful setup; writes are not transactional. Inspect the partial
+state and rerun only after addressing the error.
+
+For this migration, review and merge the policy/helper PR first (which may need
+one last use of the existing bypass), update the owner's checkout to that reviewed
+revision, then run `--plan`, `--apply`, and `--check` above. To perform the same
+migration through GitHub's UI instead:
+
+1. In **Settings → Branches**, add a classic branch protection rule matching
+   exactly `main`. Enable **Restrict who can push to matching branches**, allow
+   only `Joshbomb75`, and enable **Do not allow bypassing the above settings**.
+   Leave force pushes and deletions disabled. Keep review/check requirements in
+   the existing review ruleset.
+2. Save and reopen the rule to verify the owner allowance and absence of any bot,
+   team, or app allowance. Verify `questos-main-review` is still active with no
+   bypass and the same approval/CI requirements.
+3. Only then remove `questos-main-owner-updates` from **Settings → Rules →
+   Rulesets**. Preserve `questos-main-review` and `questos-owner-tags`. Run the
+   reviewed helper's `--check` from the owner administration context.
+
+Afterward, inspect the rulesets and effective branch restriction and verify that
+the bot has no bypass or push allowance and retains only its write role.
 Use harmless permission checks; do not test by force-pushing, deleting main,
 publishing a release, or exposing keys. Verify effective denial before declaring
 the implementation access boundary complete.
